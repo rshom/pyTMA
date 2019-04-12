@@ -33,7 +33,7 @@ class Contact:
         ''' Generate new estimate using Extended Kalman Filter'''
 
         # predict state covariance
-        Q = np.diag([1.0,1.0,1.0,1.0])**2  
+        Q = .01*np.diag([1.0,1.0,1.0,1.0])**2  
 
         # Observation covariance
         R = np.diag([1.0,1.0,1.0,1.0])**2  
@@ -63,7 +63,8 @@ class Contact:
 
 
         ## Correction for observation
-        S = jH@pPred@jH.T+R
+        S = jH@pPred@jH.T+R*5
+
         G = pPred@jH.T@np.linalg.inv(S)
 
         ## final estimate

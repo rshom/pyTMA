@@ -13,12 +13,13 @@ dT = 1
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 0,0,0,-2 ] ))
-    target = Ship( np.array([ -50,-50,1,0 ] ))
+    ownship = Ship( np.array([ 0,0,0,5 ] ))
+    target = Ship( np.array([ -200,100,5,2 ] ))
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
-
+    #contact.xEst = target.X
+    
     # Record history
     ownshipHist = ownship.X
     targetHist = target.X
@@ -30,8 +31,8 @@ def main():
         U = np.array([0,0,0,0])
         
         # move ships
-        if time == 30:
-            Xt, U = ownship.update(dT, newCourse=[2,-2])
+        if time == 20:
+            Xt, U = ownship.update(dT, newCourse=[2,2])
         else:
             Xo, _ = ownship.update(dT)
 
@@ -39,9 +40,6 @@ def main():
         # update contact
         bearing = sonar_bearing( ownship, target )
         xEst = contact.EKF( bearing, U, dT )
-        print( xy2polar(Xt))
-        print( xy2polar(xEst))
-        print()
 
         # Record history
         ownshipHist = np.vstack((ownshipHist, ownship.X))
@@ -52,8 +50,9 @@ def main():
         plt.cla()
         plt.plot(ownshipHist[:,0],ownshipHist[:,1], label="OwnShip")
         plt.plot(targetHist[:,0],targetHist[:,1], label="Target")
-        plt.plot(contactHist[:,0],contactHist[:,1], label="Contact")
+        plt.plot(contactHist[:,0],contactHist[:,1],'.', label="Contact")
         plt.axis("equal")
+        plt.title("CCOP")
         plt.legend()
         plt.pause(.1)
 
@@ -64,3 +63,6 @@ if __name__=='__main__':
     plt.style.use('ggplot')
     main()
     plt.show()
+    print()
+    print("Complete")
+    print()

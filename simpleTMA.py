@@ -6,14 +6,15 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-target = np.empty((100,4))
+samplingTime = 1
+runTime = 200
+
+target = np.empty((runTime,4))
 target[:] = [-200,100,5,2]
 
-ownShip = np.empty((100,4))
+ownShip = np.empty((runTime,4))
 ownShip[:50] = [0,0,0,5]
 
-samplingTime = 1
-runTime = 100
 
 xRel = target-ownShip
 
