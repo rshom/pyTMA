@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 
 from subcon import *
 
-runTime = 50.
+runTime = 200.
 dT = 1
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 0,0,2,2 ] ))
-    target = Ship( np.array([ 0,50,0,2 ] ))
+    ownship = Ship( np.array([ 0,0,0,2 ] ))
+    target = Ship( np.array([ -50,-50,1,1 ] ))
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
@@ -30,8 +30,8 @@ def main():
         U = np.array([0,0,0,0])
         
         # move ships
-        if time == 20:
-            Xt, U = ownship(dT, newCourse=[-2,2])
+        if time == 30:
+            Xt, U = ownship(dT, newCourse=[2,-2])
         else:
             Xo, _ = ownship(dT)
 

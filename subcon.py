@@ -41,6 +41,7 @@ class Contact:
         vRel = -speed*np.cos(bearing)
         
         self.xEst = np.array([ xRel, yRel, uRel, vRel])
+        self.xEst = np.array([ -50,-50,0,1 ] )
         self.pEst = np.eye(len(self.xEst))
         
 
@@ -55,7 +56,7 @@ class Contact:
 
         # Predict based on motion model and input from ship motion U
         xPred = motionModel@self.xEst - ownshipAcceleration
-        pPred = motionModel@self.pEst@motionModel.T+Q
+        pPred = motionModel@self.pEst@motionModel.T#+Q*.001
         bearingPred = np.arctan2(xPred[0],xPred[1])
 
         # Compare bearing prediction and observation
@@ -71,6 +72,7 @@ class Contact:
 
         ## Correction for observation
         S = jH@pPred@jH.T+R
+        print(S)
         G = pPred@jH.T@np.linalg.inv(S)
 
         ## final estimate
