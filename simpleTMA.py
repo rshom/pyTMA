@@ -6,9 +6,20 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
+target = np.empty((100,4))
+target[:] = [-200,100,5,2]
+
+ownShip = np.empty((100,4))
+ownShip[:50] = [0,0,0,5]
+
+samplingTime = 1
+runTime = 100
+
+xRel = target-ownShip
+
+time = np.arange(0,runTime,samplingTime)
+
 def calcCourse(ship, T):
-    '''takes the initial state and calculates
-    states over time assuming straight line'''
     for ii in range(len(ship[:-1])):
         F = np.array([[1, 0, T, 0],
                       [0, 1, 0, T],
@@ -18,40 +29,12 @@ def calcCourse(ship, T):
     return ship
 
 
-
-
-# define timing
-samplingTime = 1
-runTime = 100
-
-# define target ship
-target = np.empty((runTime,4))
-target[:] = [-100,100,20,0]
-
-# define initial estimates
-Xest = np.array([-100,100,20,0])
-Pest = np.eye(4)
-
-
-# define ownship
-ownShip = np.empty((runTime,4))
-ownShip[:runTime] = [0,0,20,20]
-## ownship will need to turn at some point
-turnTime = 20
-ownShip[:turnTime+1] = calcCourse(ownShip[:turnTime+1],1.0)
-ownShip[turnTime,2:] = [20,0]
-ownShip[turnTime:] = calcCourse(ownShip[turnTime:],1.0)
-
-# relative state
-xRel = target-ownShip
-
-# full time
-time = np.arange(0,runTime,samplingTime)
-
-# calculate target course
 target = calcCourse(target,1.0)
 
-# Define ownship course
+turnTime = 30
+ownShip[:turnTime+1] = calcCourse(ownShip[:turnTime+1],1.0)
+ownShip[turnTime,2:] = [-5,5]
+ownShip[turnTime:] = calcCourse(ownShip[turnTime:],1.0)
 
 Xrel = target-ownShip
 
@@ -59,32 +42,33 @@ bearings = np.arctan2(Xrel[:,0],Xrel[:,1])
 noise = np.random.normal(0, 1, bearings.shape)*np.deg2rad(.1)
 observations = bearings + noise
 
-# start recording
+Xest = np.array([-100,50,2,1])
+Pest = np.eye(4)
 zHist = np.array([np.arctan2(Xest[0],Xest[1])])
 Xhist = Xest
-
 
 Q = np.diag([1.0, 1.0, 1.0, 1.0])**2  # predict state covariance
 R = np.diag([1.0, 1.0, 1.0, 1.0])**2  # Observation covariance
 
-dT = samplingTime
+T = samplingTime
 fig,ax = plt.subplots()
-U = 0
 for k in range(runTime-1):
     # Predict motion based on current estimate
-    F = np.array([[1, 0, dT, 0],
-                  [0, 1, 0, dT],
+    F = np.array([[1, 0, T, 0],
+                  [0, 1, 0, T],
                   [0, 0, 1, 0],
                   [0, 0, 0, 1]])
 
-    Xpred = F@Xest - U
-
-    U = np.array([ownShip[k+1,0] - ownShip[k,0] - dT*ownShip[k,2],
-                  ownShip[k+1,1] - ownShip[k,1] - dT*ownShip[k,3],
-                  ownShip[k+1,2]- ownShip[k,2],
+    U = np.array([ownShip[k+1,0] - ownShip[k,0] - T*ownShip[k,2],
+                 ownShip[k+1,1] - ownShip[k,1] - T*ownShip[k,3],
+                 ownShip[k+1,2]- ownShip[k,2],
                   ownShip[k+1,3]- ownShip[k,3]])
 
-    Ppred = F@Pest@F.T+Q
+
+    Xpred = F@Xest - U
+
+
+    Ppred = F@Pest@F.T
 
     zPred = np.arctan2(Xpred[0],Xpred[1])
     zHist = np.hstack((zHist,zPred))
@@ -99,7 +83,6 @@ for k in range(runTime-1):
                   0])
 
     S = H@Ppred@H.T+R
-   
     G = Ppred@H.T@np.linalg.inv(S)
     
     Xest = Xpred+G*y
