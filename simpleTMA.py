@@ -31,9 +31,9 @@ def calcCourse(ship, T):
 
 target = calcCourse(target,1.0)
 
-turnTime = 30
+turnTime = 20
 ownShip[:turnTime+1] = calcCourse(ownShip[:turnTime+1],1.0)
-ownShip[turnTime,2:] = [-5,5]
+ownShip[turnTime,2:] = [2,2]
 ownShip[turnTime:] = calcCourse(ownShip[turnTime:],1.0)
 
 Xrel = target-ownShip
@@ -42,7 +42,7 @@ bearings = np.arctan2(Xrel[:,0],Xrel[:,1])
 noise = np.random.normal(0, 1, bearings.shape)*np.deg2rad(.1)
 observations = bearings + noise
 
-Xest = np.array([-100,50,2,1])
+Xest = np.array([-200,100,2,1])
 Pest = np.eye(4)
 zHist = np.array([np.arctan2(Xest[0],Xest[1])])
 Xhist = Xest
