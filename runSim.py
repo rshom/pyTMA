@@ -13,8 +13,8 @@ dT = 1
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 0,0,0,2 ] ))
-    target = Ship( np.array([ -50,-50,1,1 ] ))
+    ownship = Ship( np.array([ 0,0,0,-2 ] ))
+    target = Ship( np.array([ -50,-50,1,0 ] ))
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
@@ -31,15 +31,17 @@ def main():
         
         # move ships
         if time == 30:
-            Xt, U = ownship(dT, newCourse=[2,-2])
+            Xt, U = ownship.update(dT, newCourse=[2,-2])
         else:
-            Xo, _ = ownship(dT)
+            Xo, _ = ownship.update(dT)
 
-        Xt, U = target(dT)
-
+        Xt, U = target.update(dT)
         # update contact
         bearing = sonar_bearing( ownship, target )
-        xEst = contact( bearing, U, dT )
+        xEst = contact.EKF( bearing, U, dT )
+        print( xy2polar(Xt))
+        print( xy2polar(xEst))
+        print()
 
         # Record history
         ownshipHist = np.vstack((ownshipHist, ownship.X))

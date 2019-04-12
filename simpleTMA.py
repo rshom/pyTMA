@@ -6,24 +6,6 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-# define timing
-samplingTime = 1
-runTime = 50
-
-# define target ship
-target = np.empty((runTime,4))
-target[:] = [20,20,0,2]
-
-# define ownship
-ownShip = np.empty((runTime,4))
-ownShip[:runTime] = [0,0,2,2]
-
-# relative state
-xRel = target-ownShip
-
-# full time
-time = np.arange(0,runTime,samplingTime)
-
 def calcCourse(ship, T):
     '''takes the initial state and calculates
     states over time assuming straight line'''
@@ -36,25 +18,46 @@ def calcCourse(ship, T):
     return ship
 
 
+
+
+# define timing
+samplingTime = 1
+runTime = 100
+
+# define target ship
+target = np.empty((runTime,4))
+target[:] = [-100,100,20,0]
+
+# define initial estimates
+Xest = np.array([-100,100,20,0])
+Pest = np.eye(4)
+
+
+# define ownship
+ownShip = np.empty((runTime,4))
+ownShip[:runTime] = [0,0,20,20]
+## ownship will need to turn at some point
+turnTime = 20
+ownShip[:turnTime+1] = calcCourse(ownShip[:turnTime+1],1.0)
+ownShip[turnTime,2:] = [20,0]
+ownShip[turnTime:] = calcCourse(ownShip[turnTime:],1.0)
+
+# relative state
+xRel = target-ownShip
+
+# full time
+time = np.arange(0,runTime,samplingTime)
+
 # calculate target course
 target = calcCourse(target,1.0)
 
 # Define ownship course
-'''ownship will need to turn at some point'''
-turnTime = 20
-ownShip[:turnTime+1] = calcCourse(ownShip[:turnTime+1],1.0)
-ownShip[turnTime,2:] = [-2,2]
-ownShip[turnTime:] = calcCourse(ownShip[turnTime:],1.0)
 
 Xrel = target-ownShip
 
 bearings = np.arctan2(Xrel[:,0],Xrel[:,1])
 noise = np.random.normal(0, 1, bearings.shape)*np.deg2rad(.1)
 observations = bearings + noise
-
-# define initial estimates
-Xest = np.array([-100,50,2,1])
-Pest = np.eye(4)
 
 # start recording
 zHist = np.array([np.arctan2(Xest[0],Xest[1])])
