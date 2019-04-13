@@ -33,10 +33,10 @@ class Contact:
         ''' Generate new estimate using Extended Kalman Filter'''
 
         # predict state covariance
-        Q = .01*np.diag([1.0,1.0,1.0,1.0])**2  
+        Q = .05 * np.diag([1.0,1.0,1.0,1.0])**2  
 
         # Observation covariance
-        R = np.diag([1.0,1.0,1.0,1.0])**2  
+        R = 5 * np.diag([1.0,1.0,1.0,1.0])**2  
 
         ## Jacobian
         motionModel = np.array([[1, 0, dT, 0],
@@ -51,6 +51,7 @@ class Contact:
 
         # Compare bearing prediction and observation
         bearingError = bearing-bearingPred
+        print(np.rad2deg(bearingError))
 
         # Update estimates
         ## Jacobian for observation
@@ -61,9 +62,8 @@ class Contact:
             ,0
         ])
 
-
         ## Correction for observation
-        S = jH@pPred@jH.T+R*5
+        S = jH@pPred@jH.T+R
 
         G = pPred@jH.T@np.linalg.inv(S)
 
@@ -73,12 +73,75 @@ class Contact:
 
         return self.xEst
 
-    def MPCEKF( self, bearing, ownshipAcceleration, dT ):
-        yEst = xy2polar( self.xEst )
+    def MPCEKF( self, B, U, dT ):
 
+        # predict state covariance
+        Q = .05 * np.diag([1.0,1.0,1.0,1.0])**2  
+
+        # Observation covariance
+        R = 5 * np.diag([1.0,1.0,1.0,1.0])**2  
+
+        Y = xy2polar( self.xEst )
+        a = np.array([ dT*Y[0]-Y[3]* (U[0]*np.cos(B) - U[1]*np.sin(B) ),
+                           1 + dT*Y[1] - Y[3]*( U[0]*np.sin(B) + U[1]*np.cos(B) ),
+                           Y[0] - Y[3]*( U[2]*np.cos(B) - U[3]*np.sin(B) ),
+                           Y[1] - Y[3]*( U[2]*np.sin(B) - U[3]*np.cos(B) )
+        ])
+
+        yPred = np.array([ ( a[1]*a[2] - a[0]*a[3] )/( a[0]**2 + a[1]**2 ) ,
+                       ( a[0]*a[2] - a[1]*a[3] )/( a[0]**2 + a[1]**2 ) ,
+                       Y[2] + np.arctan( a[0]/a[1] ) ,
+                       Y[3]/np.sqrt( a[0]**2 + a[1]**2 )
+        ])
+
+        d11 = (-a[0]*( a[1]*a[2] - a[0]*a[3] ) - a[1]*( a[0]*a[2] + a[1]*a[3] ) )/( a[0]**2 + a[1]**2 )**2
+        d21 = -(-a[0]*( a[0]*a[2] + a[1]*a[3] ) + a[1]*( a[1]*a[2] - a[0]*a[3] ) )/( a[0]**2 + a[1]**2 )**2
+        d31 = a[1]/( a[0]**2 + a[1]**2 )
+        d41 = -a[2]*Y[3]/( a[0]**2 + a[1]**2 )**(3.0/2.0)
+        d32 = -a[0]/( a[0]**2 + a[1]**2 )
+        d42 = -a[1]*Y[3]/( a[0]**2 + a[1]**2 )
+        d13 = a[1]/( a[0]**2 + a[1]**2 )
+
+        e14 = -( U[0]*np.cos(Y[2]) - U[1]*np.sin(Y[2]) )
+        e24 = -( U[0]*np.sin(Y[2]) + U[1]*np.cos(Y[2]) )
+        e34 = -( U[2]*np.cos(Y[2]) - U[3]*np.sin(Y[2]) )
+        e44 = -( U[2]*np.sin(Y[2]) - U[3]*np.cos(Y[2]) )
+        e13 = -Y[3]*e24
+        e23 = Y[3]*e14
+        e33 = -Y[3]*e44
+        e43 = Y[3]*e34
+
+        C = np.array([[ 0,0,0,0 ],
+                      [ 0,0,0,0 ],
+                      [ 0,0,1,0 ],
+                      [ 0,0,0, 1.0/np.sqrt (a[0]**2 + a[1]**2 ) ]
+        ])
+
+        D = np.array([[ d11, -d21, d13, d32],
+                      [ d21, d11, -d32, d13],
+                      [ d31, d32, 0, 0 ],
+                      [ d41, d42, 0, 0 ]])
+
+        E = np.array([[ dT, 0, e13, e14 ],
+                      [ 0, dT, e23, e24 ],
+                      [ 1, 0, e33, e34 ],
+                      [ 0, 1, e43, e44 ]])
+                      
+
+        F = C+D@E
+        print(F)
         
+        pPred = F@self.pEst@F.T # is this right
 
-        self.xEst = polar2xy( yEst )
+        jH = np.array([0,0,1,0])
+
+        S = jH@pPred@jH.T+R
+
+        G = pPred@jH.T@np.linalg.inv(S)
+
+        self.pEst = ( np.eye(len(Y)) - G@jH )@pPred
+        
+        self.xEst = polar2xy( Y )
         return self.xEst
 
 
@@ -126,7 +189,7 @@ def sonar_bearing( ownship, ship ):
     '''Return a bearing affected by noise to a target ship'''
     
     xRel = ship.X-ownship.X
-    bearing = np.arctan2( xRel[0], xRel[1] )
+    bearing = np.arctan2( xRel[0],xRel[1] )
     noise = np.random.normal(0,1) * _SONAR_BEARING_ERROR
     return bearing+np.deg2rad(noise)
 
