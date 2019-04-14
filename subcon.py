@@ -27,7 +27,9 @@ class Contact:
         
         self.xEst = np.array([ xRel, yRel, uRel, vRel])
         self.pEst = np.eye(len(self.xEst))
-
+        
+        self.pEst = np.diag([ 1.0, 1.0/100., 1.0, 1.0/100])**2
+        print(self.pEst)
 
     def EKF( self, bearing, ownshipAcceleration, dT ):
         ''' Generate new estimate using Extended Kalman Filter'''
@@ -75,11 +77,7 @@ class Contact:
 
     def MPCEKF( self, B, U, dT ):
 
-        # predict state covariance
-        Q = 1. * np.diag([1.0,1.0,1.0,1.0])**2  
-
-        # Observation covariance
-        R = 1. * np.diag([1.0,1.0,1.0,1.0])**2  
+        # Convert to modified polar coords
         Y = xy2polar( self.xEst )
 
         a = np.array([ dT*Y[0]-Y[3]* (U[0]*np.cos(B) - U[1]*np.sin(B) ),
@@ -87,27 +85,30 @@ class Contact:
                        Y[0] - Y[3]*( U[2]*np.cos(B) - U[3]*np.sin(B) ),
                        Y[1] - Y[3]*( U[2]*np.sin(B) - U[3]*np.cos(B) )
         ])
-        
+
         yPred = np.array([ ( a[1]*a[2] - a[0]*a[3] )/( a[0]**2+a[1]**2 ),
                            ( a[0]*a[2] + a[1]*a[3] )/( a[0]**2+a[1]**2 ),
                            Y[2] + np.arctan2( a[0],a[1] ),
                            Y[3]/np.sqrt( a[0]**2+a[1]**2 )
         ])
 
-
+        # state prediction jacobian
         F = polarJacobian( Y, U, a, dT )
-        
+
         pPred = F@self.pEst@F.T # is this right
 
+        # observation jacobian
         jH = np.array([0,0,1,0])
 
-        S = jH@pPred@jH.T+R
+        S = jH@pPred@jH.T+(10)**2
 
         #G = pPred@jH.T@np.linalg.inv(S)
-        G = pPred@jH.T*S**(-1)
+        G = (pPred@jH.T)*(S)**-1
 
         yEst = yPred+G*( B - jH@yPred )
-        
+        print( G*(B - jH@yPred ))
+
+
         self.pEst = ( np.eye(len(Y)) - G@jH )@pPred
         
         self.xEst = polar2xy( yEst )
@@ -212,12 +213,12 @@ def polarJacobian(Y, U, a, dT):
     
     D = np.array([[ d11, -d21, d13, d32],
                   [ d21, d11, -d32, d13],
-                  [ d31, d32, 0, 0 ],
-                  [ d41, d42, 0, 0 ]])
+                  [ d31, d32,  0,   0 ],
+                  [ d41, d42,  0,   0 ]])
     
     E = np.array([[ dT, 0, e13, e14 ],
                   [ 0, dT, e23, e24 ],
-                  [ 1, 0, e33, e34 ],
-                  [ 0, 1, e43, e44 ]])
+                  [ 1, 0,  e33, e34 ],
+                  [ 0, 1,  e43, e44 ]])
         
     return C+D@E
