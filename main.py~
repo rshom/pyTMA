@@ -116,6 +116,7 @@ def main():
     ])
     
     xTrue = np.zeros((STATE_SIZE,1))
+    xEst = xTrue
     xDR = np.zeros((STATE_SIZE,1))
 
     PEst = np.eye(STATE_SIZE)
