@@ -8,18 +8,17 @@ import matplotlib.pyplot as plt
 
 from subcon import *
 
-runTime = 300.
-dT = 1
+runTime = 100.
+dT = 1.0
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 30.,20.,2.,5. ] ))
-    target = Ship( np.array([ 100.,100.,3.5,3.5 ] ) )
+    ownship = Ship( np.array([ 0.,0.,0, 5] ))
+    target = Ship( np.array([ -50.,50.,3.5,3.5 ] ) )
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
     contact.xEst = target.X-ownship.X
-    contact.xEst = np.array([ 100,100,3,4 ])-ownship.X
 
     # Record history
     ownshipHist = ownship.X
@@ -30,15 +29,17 @@ def main():
     while time < runTime:
         time += dT
         # move ships
-        if time == 10:
-            Xo, U = ownship.update(dT, newCourse=[5,2])
+        if time == 50:
+            Xo, U = ownship.update(dT, newCourse=[2,2])
+            print(U)
         else:
             Xo, U = ownship.update(dT)
-            
-        Xt, U = target.update(dT)
+
+        Xt, _ = target.update(dT)
 
         # update contact
         bearing = sonar_bearing( ownship, target )
+
 
         xEst = contact.MPCEKF( bearing, U, dT )
 
@@ -49,13 +50,15 @@ def main():
 
         # Plot progress
         plt.cla()
-        plt.plot(ownshipHist[:,0],ownshipHist[:,1], label="OwnShip")
-        plt.plot(targetHist[:,0],targetHist[:,1], label="Target")
+        plt.plot(ownshipHist[:,0],ownshipHist[:,1],'b', label="OwnShip")
+        plt.plot(targetHist[:,0],targetHist[:,1],'r', label="Target")
         plt.plot(contactHist[:,0],contactHist[:,1],'.', label="Contact")
         plt.axis("equal")
-        plt.title("CCOP")
+        plt.title("COP")
         plt.legend()
         plt.pause(.1)
+        print()
+        print(time)
 
     return
 

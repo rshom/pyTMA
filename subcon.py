@@ -2,8 +2,12 @@
 
 import numpy as np
 
-_SONAR_BEARING_ERROR = 1.0
-_MIN_DETECTION_RANGE = 30.0
+_SONAR_BEARING_ERROR = .01
+_MEAN_RANGE = 100.0
+_RANGE_VARIANCE = 1.0
+_SPEED_VARIANCE = 1.0
+
+_MIN_DETECTION_RANGE = 50.0
 _MAX_TARGET_SPEED = 5.0
 
 
@@ -27,18 +31,27 @@ class Contact:
         
         self.xEst = np.array([ xRel, yRel, uRel, vRel])
         self.pEst = np.eye(len(self.xEst))
+
+        self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
+                              _SPEED_VARIANCE/_MEAN_RANGE,
+                              _SONAR_BEARING_ERROR,
+                              _RANGE_VARIANCE/_MEAN_RANGE**2
+        ])**2
         
-        self.pEst = np.diag([ 1.0, 1.0/100., 1.0, 1.0/100])**2
-        print(self.pEst)
+        #self.pEst = np.diag([ 10., 10., 1., 10.])**2
+        
 
     def EKF( self, bearing, ownshipAcceleration, dT ):
         ''' Generate new estimate using Extended Kalman Filter'''
 
         # predict state covariance
-        Q = .01 * np.diag([1.0,1.0,1.0,1.0])**2  
+        Q = 1. * np.diag([1.0,1.0,.1,.1])**2
+        ### this is wrong because it is the noise caused by the process
+        ### This should be relatively low or on the same order as the
+        ### process noise I add in the model
 
         # Observation covariance
-        R = 1.5 * np.diag([1.0,1.0,1.0,1.0])**2  
+        R = 1 * np.diag([1,1,1.0,1.0])**2  
 
         ## Jacobian
         motionModel = np.array([[1, 0, dT, 0],
@@ -80,7 +93,7 @@ class Contact:
         # Convert to modified polar coords
         Y = xy2polar( self.xEst )
 
-        a = np.array([ dT*Y[0]-Y[3]* (U[0]*np.cos(B) - U[1]*np.sin(B) ),
+        a = np.array([ dT*Y[0] - Y[3]*( U[0]*np.cos(B) - U[1]*np.sin(B) ),
                        1 + dT*Y[1] - Y[3]*( U[0]*np.sin(B) + U[1]*np.cos(B) ),
                        Y[0] - Y[3]*( U[2]*np.cos(B) - U[3]*np.sin(B) ),
                        Y[1] - Y[3]*( U[2]*np.sin(B) - U[3]*np.cos(B) )
@@ -100,18 +113,18 @@ class Contact:
         # observation jacobian
         jH = np.array([0,0,1,0])
 
-        S = jH@pPred@jH.T+(10)**2
-
+        S = jH@pPred@jH.T+(_SONAR_BEARING_ERROR)**2
         #G = pPred@jH.T@np.linalg.inv(S)
         G = (pPred@jH.T)*(S)**-1
 
         yEst = yPred+G*( B - jH@yPred )
-        print( G*(B - jH@yPred ))
-
-
         self.pEst = ( np.eye(len(Y)) - G@jH )@pPred
         
         self.xEst = polar2xy( yEst )
+
+        print(yEst)
+        print(self.xEst)
+        print()
         
         return self.xEst
 
@@ -139,14 +152,13 @@ class Ship:
                                 [0, 0, 0, 1]])
 
         self.X = motionModel@self.X
-        
 
         # Ship motion as input to relative motion of other ships
         U = np.array([self.X[0] - xPrev[0] - dT*xPrev[2],
                       self.X[1] - xPrev[1] - dT*xPrev[3],
                       self.X[2] - xPrev[2],
                       self.X[3] - xPrev[3]])
-        
+
         return self.X, U
 
 
@@ -169,7 +181,7 @@ def xy2polar(X):
     '''Converts to modified polar coords'''
 
     Y = np.array( [ ( X[2]*X[1]-X[3]*X[0] )/(X[0]**2+X[1]**2), # bearing_rate
-                    ( X[2]*X[0]-X[3]*X[1] )/(X[0]**2+X[1]**2), # range_rate /range
+                    ( X[2]*X[0]+X[3]*X[1] )/(X[0]**2+X[1]**2), # range_rate /range
                     np.arctan2(X[0],X[1]),                     # bearing
                     1.0/np.sqrt(X[0]**2+X[1]**2)               # 1/range
     ])
@@ -181,7 +193,7 @@ def polar2xy(Y):
     X = (1/Y[3])*np.array([np.sin(Y[2]),
                            np.cos(Y[2]),
                            Y[1]*np.sin(Y[2]) + Y[0]*np.cos(Y[2]),
-                           Y[1]*np.cos(Y[2]) + Y[0]*np.sin(Y[2])
+                           Y[1]*np.cos(Y[2]) - Y[0]*np.sin(Y[2])
     ])
     return X
 
