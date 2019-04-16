@@ -32,12 +32,15 @@ class Contact:
         self.xEst = np.array([ xRel, yRel, uRel, vRel])
         self.pEst = np.eye(len(self.xEst))
 
+        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
+        self.xEst = polar2xy( yEst )
+
         self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
                               _SPEED_VARIANCE/_MEAN_RANGE,
                               _SONAR_BEARING_ERROR,
                               _RANGE_VARIANCE/_MEAN_RANGE**2
         ])**2
-        
+
         #self.pEst = np.diag([ 10., 10., 1., 10.])**2
         
 

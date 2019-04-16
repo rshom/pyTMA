@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from subcon import *
 
-runTime = 100.
+runTime = 200.
 dT = 1.0
 
 def main():
@@ -18,7 +18,7 @@ def main():
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
-    contact.xEst = target.X-ownship.X
+    #contact.xEst = target.X-ownship.X
 
     # Record history
     ownshipHist = ownship.X
@@ -29,8 +29,8 @@ def main():
     while time < runTime:
         time += dT
         # move ships
-        if time == 50:
-            Xo, U = ownship.update(dT, newCourse=[2,2])
+        if time == 10:
+            Xo, U = ownship.update(dT, newCourse=[2,3])
             print(U)
         else:
             Xo, U = ownship.update(dT)
