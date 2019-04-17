@@ -72,16 +72,16 @@ def main():
 
         # Plot progress
         plt.cla()
-        plt.plot(ownshipHist[:,0],ownshipHist[:,1],'b', label="OwnShip")
-        plt.plot(targetHist[:,0],targetHist[:,1],'r', label="Target")
-        plt.plot(contactHist[:,0],contactHist[:,1],'.', label="Contact")
+        plt.plot(ownshipHist[:,0],ownshipHist[:,1],'b-', label="OwnShip")
+        plt.plot(targetHist[:,0],targetHist[:,1],'r-', label="Target")
+        plt.plot(contactHist[:,0],contactHist[:,1],'r.', label="Contact")
         plt.axis("equal")
         #plt.ylim((-10,500))
         #plt.xlim((-10,500))
-        #plt.axis((0,400,1,400))
+        #plt.axis((-10,5000,-10,5000))
         plt.title("COP")
         plt.legend()
-        plt.pause(.1)
+        plt.pause(.01*dT)
 
     
     build_plots( contactHist, targetHist, ownshipHist )
