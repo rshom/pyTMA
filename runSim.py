@@ -22,30 +22,11 @@ def main():
     #contact.xEst = target.X-ownship.X
 
     # Record history
-    ownshipHist = ownship.X
-    targetHist = target.X
-    contactHist = contact.xEst+ownship.X
-    relHist = mpc2polar(xy2mpc(contact.xEst))
+    ownshipHist = ownship.X; targetHist = target.X; contactHist = contact.xEst+ownship.X
 
     time = 0
     while time < runTime*dT:
-        #print()
-        #print(time)
         # move ships
-        '''
-        if time == 10*dT:
-            Xo, U = ownship.update(dT, newCourse=[0,6])
-        elif time == 30*dT:
-            Xo, U = ownship.update(dT, newCourse=[6,0])
-        elif time == 50*dT:
-            Xo, U = ownship.update(dT, newCourse=[0,6])
-        elif time == 70*dT:
-            Xo, U = ownship.update(dT, newCourse=[6,0])
-        elif time == 90*dT:
-            Xo, U = ownship.update(dT, newCourse=[0,6])
-        else:
-            Xo, U = ownship.update(dT)
-        '''
         if time == 10*dT:
             Xo, U = ownship.update(dT, newCourse=[3,3])
         elif time == 20*dT:
@@ -57,8 +38,6 @@ def main():
 
         Xt, _ = target.update(dT)
 
-        time += dT
-
         # update contact
         bearing = sonar_bearing( ownship, target )
         xEst, yEst = contact.MPCEKF( bearing, U, dT )
@@ -68,7 +47,8 @@ def main():
     
         targetHist = np.vstack((targetHist,target.X))
         contactHist = np.vstack((contactHist,contact.xEst+ownship.X))
-        #relcontactHist = np.vstack((relHist, MPC2polar(yEst)))
+
+        time += dT
 
         # Plot progress
         plt.cla()

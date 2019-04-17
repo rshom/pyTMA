@@ -12,31 +12,12 @@ _SPEED_VARIANCE = 0.01
 _MIN_DETECTION_RANGE = 10.0
 _MAX_TARGET_SPEED = 5.0
 
-
 class Contact:
     def __init__( self, bearing ):
         '''Create a new contact assuming the most dangerous solution to start'''
-        
-        print("New contact bears {}".format(np.rad2deg(bearing)))
-        
-        # assume target is close
-        distance = _MIN_DETECTION_RANGE
-        xRel = distance*np.sin(bearing)
-        yRel = distance*np.cos(bearing)
-        
-        # assume target is fast
-        speed = _MAX_TARGET_SPEED
-        
-        # assume target is on collision course
-        uRel = -speed*np.sin(bearing)
-        vRel = -speed*np.cos(bearing)
-        
-        self.xEst = np.array([ xRel, yRel, uRel, vRel])
-        self.pEst = np.eye(len(self.xEst))
-
-        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MIN_DETECTION_RANGE ])
         self.yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
-        self.xEst = mpc2xy( yEst )
+
+        self.xEst = mpc2xy( self.yEst )
 
         self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
                               _SPEED_VARIANCE/_MEAN_RANGE,
@@ -44,15 +25,6 @@ class Contact:
                               _RANGE_VARIANCE/_MEAN_RANGE**2
         ])
 
-        print(self.pEst)
-        ''''
-        self.pEst = np.diag([ _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
-                              _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
-                              np.deg2rad(_SONAR_BEARING_ERROR),
-                              _RANGE_VARIANCE/_MEAN_RANGE**2
-        ])
-        '''
-        #self.pEst = np.diag([ 10., 10., 1., 1.])**2
         
 
     def EKF( self, bearing, ownshipAcceleration, dT ):
@@ -122,7 +94,7 @@ class Contact:
         # state prediction jacobian
         F = polarJacobian( Y, U, a, dT )
 
-        pPred = F@self.pEst@F.T # is this right
+        pPred = F@self.pEst@F.T 
 
         # observation jacobian
         jH = np.array([0,0,1,0])
