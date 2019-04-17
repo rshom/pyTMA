@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-_SONAR_BEARING_ERROR = .1
-_MEAN_RANGE = 100.0
-_RANGE_VARIANCE = .1
+_SONAR_BEARING_ERROR = 0.1
+_MEAN_RANGE = 200.0
+_RANGE_VARIANCE = 1.0
 _SPEED_VARIANCE = 0.01
 
 _MIN_DETECTION_RANGE = 10.0
@@ -147,7 +147,7 @@ class Ship:
     def update( self, dT, newCourse=None ):
         '''step ship forward and record path'''
 
-        Qsim = np.random.randn(4)*.05
+        Qsim = np.random.randn(4)*.1
         Qsim[2:3] = 0
         xPrev = self.X.copy()
 

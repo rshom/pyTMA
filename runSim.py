@@ -15,8 +15,8 @@ dT = 10.0
 def main():
     # Generate ownship and target ship
     ownship = Ship( np.array([ 5.,15.,3, 1] ))
-    target = Ship( np.array([ 50.,50.,5, 2 ] ) )
-
+    target = Ship( np.array([ 50.,50.,4, 2 ] ) )
+    
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
     #contact.xEst = target.X-ownship.X
@@ -46,10 +46,12 @@ def main():
         else:
             Xo, U = ownship.update(dT)
         '''
-        if time == 10:
+        if time == 10*dT:
             Xo, U = ownship.update(dT, newCourse=[3,3])
-        elif time == 50:
+        elif time == 20*dT:
             Xo, U = ownship.update(dT, newCourse=[3,0])
+        elif time == 30*dT:
+            Xo, U = ownship.update(dT, newCourse=[3,3])
         else:
             Xo, U = ownship.update(dT)
 
@@ -87,8 +89,7 @@ def main():
 
 
 if __name__=='__main__':
-    plt.style.use('ggplot')
-    for _ in range(10):
+    for _ in range(1):
         print("starting SIM")
         main()
         print()
