@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 
 from subcon import *
 
-runTime = 200.
+runTime = 100.
 dT = 1.0
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 0.,0.,-3, 5] ))
-    target = Ship( np.array([ -100.,50.,3.5,3.5 ] ) )
+    ownship = Ship( np.array([ 5.,5.,6, 0] ))
+    target = Ship( np.array([ 50.,50.,3,3 ] ) )
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
@@ -31,10 +31,16 @@ def main():
         #print()
         #print(time)
         # move ships
-        if time == 30:
-            Xo, U = ownship.update(dT, newCourse=[5,3])
+        if time == 10:
+            Xo, U = ownship.update(dT, newCourse=[0,6])
+        elif time == 30:
+            Xo, U = ownship.update(dT, newCourse=[6,0])
+        elif time == 50:
+            Xo, U = ownship.update(dT, newCourse=[0,6])
         elif time == 70:
-            Xo, U = ownship.update(dT, newCourse=[3,5])
+            Xo, U = ownship.update(dT, newCourse=[6,0])
+        elif time == 90:
+            Xo, U = ownship.update(dT, newCourse=[0,6])
         else:
             Xo, U = ownship.update(dT)
 
@@ -58,7 +64,7 @@ def main():
         plt.plot(ownshipHist[:,0],ownshipHist[:,1],'b', label="OwnShip")
         plt.plot(targetHist[:,0],targetHist[:,1],'r', label="Target")
         plt.plot(contactHist[:,0],contactHist[:,1],'.', label="Contact")
-        plt.axis("equal")
+        plt.axis((0,400,1,400))
         plt.title("COP")
         plt.legend()
         plt.pause(.1*dT)

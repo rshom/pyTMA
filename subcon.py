@@ -4,12 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-_SONAR_BEARING_ERROR = 1.0
+_SONAR_BEARING_ERROR = 1.5
 _MEAN_RANGE = 75.0
-_RANGE_VARIANCE = 10.0
-_SPEED_VARIANCE = .001
+_RANGE_VARIANCE = 0.000001
+_SPEED_VARIANCE = .02
 
-_MIN_DETECTION_RANGE = 50.0
+_MIN_DETECTION_RANGE = 10.0
 _MAX_TARGET_SPEED = 5.0
 
 
@@ -35,6 +35,7 @@ class Contact:
         self.pEst = np.eye(len(self.xEst))
 
         yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MIN_DETECTION_RANGE ])
+        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
         self.xEst = mpc2xy( yEst )
 
         self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
@@ -42,6 +43,8 @@ class Contact:
                               np.deg2rad(_SONAR_BEARING_ERROR),
                               _RANGE_VARIANCE/_MEAN_RANGE**2
         ])
+
+        print(self.pEst)
         ''''
         self.pEst = np.diag([ _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
                               _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
@@ -144,7 +147,7 @@ class Ship:
     def update( self, dT, newCourse=None ):
         '''step ship forward and record path'''
 
-        Qsim = np.random.randn(4)*.1
+        Qsim = np.random.randn(4)*.05
         Qsim[2:3] = 0
         xPrev = self.X.copy()
 
@@ -240,9 +243,11 @@ def polarJacobian(Y, U, a, dT):
 
 def mpc2polar( Y ):
     '''Returns array of [Bearing, Bearing Rate, Range, Range Rate] to target'''
-    return np.array([ Y[2],
-                      Y[0],
+    return np.array([ np.rad2deg(Y[2]),
+                      np.rad2deg(Y[0]),
+                      #Y[3],
                       1/Y[3],
+                      #Y[2]
                       Y[2]/Y[3]
     ])
 
@@ -265,19 +270,26 @@ def build_plots( contactHist, targetHist, ownshipHist ):
     contactRelHist = convert_hist_polar( contactHist, ownshipHist )
     fig,ax = plt.subplots(2,2)
     plt.tight_layout()
-    ax[0,0].plot(contactRelHist[:,0])
-    ax[0,1].plot(contactRelHist[:,1])
-    ax[1,0].plot(contactRelHist[:,2])
-    ax[1,1].plot(contactRelHist[:,3])
+    ax[0,0].plot(contactRelHist[:,0], '.')
+    ax[0,1].plot(contactRelHist[:,1], '.')
+    ax[1,0].plot(contactRelHist[:,2], '.')
+    ax[1,1].plot(contactRelHist[:,3], '.')
 
     targetRelHist = convert_hist_polar( targetHist, ownshipHist )
-    ax[0,0].plot(targetRelHist[:,0])
-    ax[0,1].plot(targetRelHist[:,1])
-    ax[1,0].plot(targetRelHist[:,2])
-    ax[1,1].plot(targetRelHist[:,3])
+    ax[0,0].plot(targetRelHist[:,0], '-')
+    ax[0,1].plot(targetRelHist[:,1], '-')
+    ax[1,0].plot(targetRelHist[:,2], '-')
+    ax[1,1].plot(targetRelHist[:,3], '-')
     
     #[Bearing, Bearing Rate, Range, Range Rate] to target
     ax[0,0].set_title("Bearing")
+    ax[0,0].set_ylim((-180,180))
+
     ax[0,1].set_title("Bearing Rate")
+    ax[0,1].set_ylim((-180,180))
+    
     ax[1,0].set_title("Range")
+    ax[1,0].set_ylim(0, max(targetRelHist[:,2]))
+    
     ax[1,1].set_title("Range Rate")
+    ax[1,1].set_ylim(0, max(targetRelHist[:,3]))
