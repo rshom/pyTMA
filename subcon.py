@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 
 _SONAR_BEARING_ERROR = .1
-_MEAN_RANGE = 75.0
-_RANGE_VARIANCE = 25
-_SPEED_VARIANCE = 1.0
+_MEAN_RANGE = 100.0
+_RANGE_VARIANCE = .1
+_SPEED_VARIANCE = 0.01
 
 _MIN_DETECTION_RANGE = 10.0
 _MAX_TARGET_SPEED = 5.0
@@ -283,13 +283,15 @@ def build_plots( contactHist, targetHist, ownshipHist ):
     
     #[Bearing, Bearing Rate, Range, Range Rate] to target
     ax[0,0].set_title("Bearing")
-    ax[0,0].set_ylim((-180,180))
 
     ax[0,1].set_title("Bearing Rate")
-    ax[0,1].set_ylim((-180,180))
     
     ax[1,0].set_title("Range")
-    ax[1,0].set_ylim(0, max(targetRelHist[:,2]))
     
     ax[1,1].set_title("Range Rate")
+    '''
+    ax[0,0].set_ylim((-180,180))
+    ax[0,1].set_ylim((-180,180))
+    ax[1,0].set_ylim(0, max(targetRelHist[:,2]))
     ax[1,1].set_ylim(0, max(targetRelHist[:,3]))
+    '''
