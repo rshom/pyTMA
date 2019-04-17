@@ -48,7 +48,7 @@ Pest = np.eye(4)
 zHist = np.array([np.arctan2(Xest[0],Xest[1])])
 Xhist = Xest
 
-Q = np.diag([1.0, 1.0, 1.0, 1.0])**2  # predict state covariance
+Q = np.diag([10.0, 10.0, 1.0, 1.0])**2  # predict state covariance
 R = np.diag([1.0, 1.0, 1.0, 1.0])**2  # Observation covariance
 
 T = samplingTime

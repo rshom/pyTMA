@@ -13,8 +13,8 @@ dT = 1.0
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 0.,0.,0, 5] ))
-    target = Ship( np.array([ -50.,50.,3.5,3.5 ] ) )
+    ownship = Ship( np.array([ 0.,0.,-3, 5] ))
+    target = Ship( np.array([ -100.,50.,3.5,3.5 ] ) )
 
     # Take initial bearing to target and create contact
     contact = Contact( sonar_bearing( ownship, target ) )
@@ -24,29 +24,34 @@ def main():
     ownshipHist = ownship.X
     targetHist = target.X
     contactHist = contact.xEst+ownship.X
+    relHist = mpc2polar(xy2mpc(contact.xEst))
 
     time = 0
     while time < runTime:
-        time += dT
+        #print()
+        #print(time)
         # move ships
-        if time == 10:
-            Xo, U = ownship.update(dT, newCourse=[2,3])
-            print(U)
+        if time == 30:
+            Xo, U = ownship.update(dT, newCourse=[5,3])
+        elif time == 70:
+            Xo, U = ownship.update(dT, newCourse=[3,5])
         else:
             Xo, U = ownship.update(dT)
 
         Xt, _ = target.update(dT)
 
+        time += dT
+
         # update contact
         bearing = sonar_bearing( ownship, target )
-
-
-        xEst = contact.MPCEKF( bearing, U, dT )
+        xEst, yEst = contact.MPCEKF( bearing, U, dT )
 
         # Record history
         ownshipHist = np.vstack((ownshipHist, ownship.X))
+    
         targetHist = np.vstack((targetHist,target.X))
         contactHist = np.vstack((contactHist,contact.xEst+ownship.X))
+        #relcontactHist = np.vstack((relHist, MPC2polar(yEst)))
 
         # Plot progress
         plt.cla()
@@ -56,10 +61,10 @@ def main():
         plt.axis("equal")
         plt.title("COP")
         plt.legend()
-        plt.pause(.1)
-        print()
-        print(time)
+        plt.pause(.1*dT)
 
+    
+    build_plots( contactHist, targetHist, ownshipHist )
     return
 
 

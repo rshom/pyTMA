@@ -1,11 +1,13 @@
 '''Submarine Control Library'''
 
 import numpy as np
+import matplotlib.pyplot as plt
 
-_SONAR_BEARING_ERROR = .01
-_MEAN_RANGE = 100.0
-_RANGE_VARIANCE = 1.0
-_SPEED_VARIANCE = 1.0
+
+_SONAR_BEARING_ERROR = 1.0
+_MEAN_RANGE = 75.0
+_RANGE_VARIANCE = 10.0
+_SPEED_VARIANCE = .001
 
 _MIN_DETECTION_RANGE = 50.0
 _MAX_TARGET_SPEED = 5.0
@@ -32,16 +34,22 @@ class Contact:
         self.xEst = np.array([ xRel, yRel, uRel, vRel])
         self.pEst = np.eye(len(self.xEst))
 
-        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
-        self.xEst = polar2xy( yEst )
+        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MIN_DETECTION_RANGE ])
+        self.xEst = mpc2xy( yEst )
 
         self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
                               _SPEED_VARIANCE/_MEAN_RANGE,
-                              _SONAR_BEARING_ERROR,
+                              np.deg2rad(_SONAR_BEARING_ERROR),
                               _RANGE_VARIANCE/_MEAN_RANGE**2
-        ])**2
-
-        #self.pEst = np.diag([ 10., 10., 1., 10.])**2
+        ])
+        ''''
+        self.pEst = np.diag([ _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
+                              _MAX_TARGET_SPEED/_MIN_DETECTION_RANGE,
+                              np.deg2rad(_SONAR_BEARING_ERROR),
+                              _RANGE_VARIANCE/_MEAN_RANGE**2
+        ])
+        '''
+        #self.pEst = np.diag([ 10., 10., 1., 1.])**2
         
 
     def EKF( self, bearing, ownshipAcceleration, dT ):
@@ -89,12 +97,12 @@ class Contact:
         self.xEst = xPred+G*bearingError
         self.pEst = (np.eye(len(self.xEst)) - G@jH)@pPred
 
-        return self.xEst
+        return self.xEst, xy2mpc(self.xEst)
 
     def MPCEKF( self, B, U, dT ):
 
         # Convert to modified polar coords
-        Y = xy2polar( self.xEst )
+        Y = xy2mpc( self.xEst )
 
         a = np.array([ dT*Y[0] - Y[3]*( U[0]*np.cos(B) - U[1]*np.sin(B) ),
                        1 + dT*Y[1] - Y[3]*( U[0]*np.sin(B) + U[1]*np.cos(B) ),
@@ -102,10 +110,10 @@ class Contact:
                        Y[1] - Y[3]*( U[2]*np.sin(B) - U[3]*np.cos(B) )
         ])
 
-        yPred = np.array([ ( a[1]*a[2] - a[0]*a[3] )/( a[0]**2+a[1]**2 ),
-                           ( a[0]*a[2] + a[1]*a[3] )/( a[0]**2+a[1]**2 ),
-                           Y[2] + np.arctan2( a[0],a[1] ),
-                           Y[3]/np.sqrt( a[0]**2+a[1]**2 )
+        yPred = np.array([ ( a[1]*a[2] - a[0]*a[3] )/( a[0]**2 + a [1]**2 ),
+                           ( a[0]*a[2] + a[1]*a[3] )/( a[0]**2 + a[1]**2 ),
+                           Y[2] + np.arctan2( a[0], a[1] ),
+                           Y[3]/np.sqrt( a[0]**2 + a[1]**2 )
         ])
 
         # state prediction jacobian
@@ -116,20 +124,16 @@ class Contact:
         # observation jacobian
         jH = np.array([0,0,1,0])
 
-        S = jH@pPred@jH.T+(_SONAR_BEARING_ERROR)**2
+        S = jH@pPred@jH.T+np.deg2rad(_SONAR_BEARING_ERROR)**2
         #G = pPred@jH.T@np.linalg.inv(S)
         G = (pPred@jH.T)*(S)**-1
 
         yEst = yPred+G*( B - jH@yPred )
         self.pEst = ( np.eye(len(Y)) - G@jH )@pPred
         
-        self.xEst = polar2xy( yEst )
+        self.xEst = mpc2xy( yEst )
 
-        print(yEst)
-        print(self.xEst)
-        print()
-        
-        return self.xEst
+        return self.xEst, yEst
 
 
 class Ship:
@@ -140,35 +144,31 @@ class Ship:
     def update( self, dT, newCourse=None ):
         '''step ship forward and record path'''
 
-        xPrev = self.X
+        Qsim = np.random.randn(4)*.1
+        Qsim[2:3] = 0
+        xPrev = self.X.copy()
+
         if newCourse:
             self.X[2] = newCourse[0]
             self.X[3] = newCourse[1]
-
-        #heading = np.deg2rad(heading)
-        #self.X[2] = speed*np.sin(heading)
-        #self.X[3] = speed*np.cos(heading)
 
         motionModel = np.array([[1, 0, dT, 0],
                                 [0, 1, 0, dT],
                                 [0, 0, 1, 0],
                                 [0, 0, 0, 1]])
 
-        self.X = motionModel@self.X
+        self.X = motionModel@self.X+Qsim
+
+        
 
         # Ship motion as input to relative motion of other ships
-        U = np.array([self.X[0] - xPrev[0] - dT*xPrev[2],
-                      self.X[1] - xPrev[1] - dT*xPrev[3],
+        U = np.array([self.X[0] - (xPrev[0] + dT*xPrev[2]),
+                      self.X[1] - (xPrev[1] + dT*xPrev[3]),
                       self.X[2] - xPrev[2],
-                      self.X[3] - xPrev[3]])
+                      self.X[3] - xPrev[3]
+        ])
 
         return self.X, U
-
-
-    def change_course( self, heading, speed, dT ):
-        '''Update the course while maintaining current position'''
-
-
 
 
 def sonar_bearing( ownship, ship ):
@@ -176,11 +176,11 @@ def sonar_bearing( ownship, ship ):
     
     xRel = ship.X-ownship.X
     bearing = np.arctan2( xRel[0],xRel[1] )
-    noise = np.random.normal(0,1) * _SONAR_BEARING_ERROR
-    return bearing+np.deg2rad(noise)
+    noise = np.random.normal(0,1) * np.deg2rad(_SONAR_BEARING_ERROR)
+    return bearing+noise
 
 
-def xy2polar(X):
+def xy2mpc(X):
     '''Converts to modified polar coords'''
 
     Y = np.array( [ ( X[2]*X[1]-X[3]*X[0] )/(X[0]**2+X[1]**2), # bearing_rate
@@ -190,7 +190,7 @@ def xy2polar(X):
     ])
     return Y
 
-def polar2xy(Y):
+def mpc2xy(Y):
     '''convert from modified polar coords'''
 
     X = (1/Y[3])*np.array([np.sin(Y[2]),
@@ -237,3 +237,47 @@ def polarJacobian(Y, U, a, dT):
                   [ 0, 1,  e43, e44 ]])
         
     return C+D@E
+
+def mpc2polar( Y ):
+    '''Returns array of [Bearing, Bearing Rate, Range, Range Rate] to target'''
+    return np.array([ Y[2],
+                      Y[0],
+                      1/Y[3],
+                      Y[2]/Y[3]
+    ])
+
+def convert_hist_polar( hist, ownshipHist ):
+    '''Returns array of vectors [Bearing, Bearing Rate, Range, Range Rate] to target'''
+    if len(hist)!=len(ownshipHist):
+        print("Lengths must match")
+        return 0
+    xRel = hist-ownshipHist
+    Y = np.zeros_like(xRel)
+    ii = 0
+    for val in xRel:
+        Y[ii] = mpc2polar(xy2mpc(val))
+        ii+=1
+    
+    return Y
+
+def build_plots( contactHist, targetHist, ownshipHist ):
+    '''build and display some error checking plots at the end'''
+    contactRelHist = convert_hist_polar( contactHist, ownshipHist )
+    fig,ax = plt.subplots(2,2)
+    plt.tight_layout()
+    ax[0,0].plot(contactRelHist[:,0])
+    ax[0,1].plot(contactRelHist[:,1])
+    ax[1,0].plot(contactRelHist[:,2])
+    ax[1,1].plot(contactRelHist[:,3])
+
+    targetRelHist = convert_hist_polar( targetHist, ownshipHist )
+    ax[0,0].plot(targetRelHist[:,0])
+    ax[0,1].plot(targetRelHist[:,1])
+    ax[1,0].plot(targetRelHist[:,2])
+    ax[1,1].plot(targetRelHist[:,3])
+    
+    #[Bearing, Bearing Rate, Range, Range Rate] to target
+    ax[0,0].set_title("Bearing")
+    ax[0,1].set_title("Bearing Rate")
+    ax[1,0].set_title("Range")
+    ax[1,1].set_title("Range Rate")
