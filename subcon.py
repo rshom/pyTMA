@@ -4,10 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-_SONAR_BEARING_ERROR = 1.5
+_SONAR_BEARING_ERROR = .1
 _MEAN_RANGE = 75.0
-_RANGE_VARIANCE = 0.000001
-_SPEED_VARIANCE = .02
+_RANGE_VARIANCE = 25
+_SPEED_VARIANCE = 1.0
 
 _MIN_DETECTION_RANGE = 10.0
 _MAX_TARGET_SPEED = 5.0
@@ -35,7 +35,7 @@ class Contact:
         self.pEst = np.eye(len(self.xEst))
 
         yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MIN_DETECTION_RANGE ])
-        yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
+        self.yEst = np.array([ 0.0, 0.0, bearing, 1.0/_MEAN_RANGE ])
         self.xEst = mpc2xy( yEst )
 
         self.pEst = np.diag([ _SPEED_VARIANCE/_MEAN_RANGE,
@@ -105,8 +105,8 @@ class Contact:
     def MPCEKF( self, B, U, dT ):
 
         # Convert to modified polar coords
-        Y = xy2mpc( self.xEst )
-
+        #Y = xy2mpc( self.xEst )
+        Y = self.yEst
         a = np.array([ dT*Y[0] - Y[3]*( U[0]*np.cos(B) - U[1]*np.sin(B) ),
                        1 + dT*Y[1] - Y[3]*( U[0]*np.sin(B) + U[1]*np.cos(B) ),
                        Y[0] - Y[3]*( U[2]*np.cos(B) - U[3]*np.sin(B) ),
@@ -131,12 +131,12 @@ class Contact:
         #G = pPred@jH.T@np.linalg.inv(S)
         G = (pPred@jH.T)*(S)**-1
 
-        yEst = yPred+G*( B - jH@yPred )
+        self.yEst = yPred+G*( B - jH@yPred )
         self.pEst = ( np.eye(len(Y)) - G@jH )@pPred
         
-        self.xEst = mpc2xy( yEst )
+        self.xEst = mpc2xy( self.yEst )
 
-        return self.xEst, yEst
+        return self.xEst, self.yEst
 
 
 class Ship:

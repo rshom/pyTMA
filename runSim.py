@@ -13,7 +13,7 @@ dT = 1.0
 
 def main():
     # Generate ownship and target ship
-    ownship = Ship( np.array([ 5.,5.,6, 0] ))
+    ownship = Ship( np.array([ 5.,5.,6, 1] ))
     target = Ship( np.array([ 50.,50.,3,3 ] ) )
 
     # Take initial bearing to target and create contact
@@ -31,6 +31,7 @@ def main():
         #print()
         #print(time)
         # move ships
+        '''
         if time == 10:
             Xo, U = ownship.update(dT, newCourse=[0,6])
         elif time == 30:
@@ -43,7 +44,12 @@ def main():
             Xo, U = ownship.update(dT, newCourse=[0,6])
         else:
             Xo, U = ownship.update(dT)
-
+        '''
+        if time == 10:
+            Xo, U = ownship.update(dT, newCourse=[2,3])
+        else:
+            Xo, U = ownship.update(dT)
+        
         Xt, _ = target.update(dT)
 
         time += dT
